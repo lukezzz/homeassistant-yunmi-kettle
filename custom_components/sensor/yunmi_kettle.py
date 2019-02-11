@@ -2,6 +2,7 @@
 import math
 import logging
 
+from homeassistant.components.sensor import DOMAIN
 from homeassistant.const import (CONF_NAME, CONF_HOST, CONF_TOKEN, )
 from homeassistant.helpers.entity import Entity
 from homeassistant.exceptions import PlatformNotReady
@@ -10,16 +11,20 @@ _LOGGER = logging.getLogger(__name__)
 
 REQUIREMENTS = ['python-miio>=0.3.1']
 
-CURRENT_TEMPE = {'name': 'current temperture', 'key': '°C'}
-SETUP_TEMPE = {'name': 'setup temperture', 'key': '°C'}
-CUSTOM_TEMPE1 = {'name': 'custom temperture1', 'key': '°C'}
-TDS = {'name': 'TDS', 'key': 'ppm'}
-WATER_REMAIN_TIME = {'name': 'water remain time', 'key': 'hour'}
+CURRENT_TEMPE = {'name': 'kettle current temperture', 'key': '°C'}
+SETUP_TEMPE = {'name': 'kettle setup temperture', 'key': '°C'}
+TDS = {'name': 'kettle TDS', 'key': 'ppm'}
+WATER_REMAIN_TIME = {'name': 'kettle water remain time', 'key': 'hour'}
 
+
+SUCCESS = ['ok']
+
+ATTR_TEMP = 'temp'
+DEFAULT_TEMP = '48'
 
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Perform the setup for Yunmi kettel."""
+    """Perform the setup for Yunmi kettle."""
     from miio import Device, DeviceException
 
     host = config.get(CONF_HOST)
@@ -35,7 +40,6 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         devices.append(yumikettle)
         devices.append(YunmiKettleSensor(yumikettle, CURRENT_TEMPE))
         devices.append(YunmiKettleSensor(yumikettle, SETUP_TEMPE))
-        devices.append(YunmiKettleSensor(yumikettle, CUSTOM_TEMPE1))
         devices.append(YunmiKettleSensor(yumikettle, TDS))
         devices.append(YunmiKettleSensor(yumikettle, WATER_REMAIN_TIME))
 
@@ -44,6 +48,16 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         raise PlatformNotReady
 
     add_devices(devices)
+
+    def handle_set_temp(service):
+        temp = service.data.get(ATTR_TEMP, DEFAULT_TEMP)
+        _LOGGER.info("yunmi kettle service call data: %s", temp)
+        result = device.send('set_tempe_setup', [1, int(temp)])
+
+        return result == SUCCESS
+
+    hass.services.register(DOMAIN, 'set_kettle_temp', handle_set_temp)
+
 
 class YunmiKettleSensor(Entity):
     """Representation of a YunmiKettleSensor."""
@@ -65,8 +79,7 @@ class YunmiKettleSensor(Entity):
     def icon(self):
         """Icon to use in the frontend, if any."""
         if self._data_key['key'] is CURRENT_TEMPE['key'] or \
-           self._data_key['key'] is SETUP_TEMPE['key'] or \
-           self._data_key['key'] is CUSTOM_TEMPE1['key']:
+           self._data_key['key'] is SETUP_TEMPE['key']:
             return 'mdi:water'
         else:
             return 'mdi:filter-outline'
@@ -83,7 +96,7 @@ class YunmiKettleSensor(Entity):
             return 'TDS'
         if self._data_key['key'] is WATER_REMAIN_TIME['key']:
             return 'hour'
-        return '%'
+        return '°C'
 
     @property
     def device_state_attributes(self):
@@ -145,7 +158,6 @@ class YunmiKettle(Entity):
         attrs = {}
         attrs[CURRENT_TEMPE['name']] = '{}°C'.format(self._data[CURRENT_TEMPE['key']])
         attrs[SETUP_TEMPE['name']] = '{}°C'.format(self._data[SETUP_TEMPE['key']])
-        attrs[CUSTOM_TEMPE1['name']] = '{}°C'.format(self._data[CUSTOM_TEMPE1['key']])
         attrs[TDS['name']] = '{}ppm'.format(self._data[TDS['key']])
         attrs[WATER_REMAIN_TIME['name']] = '{}hour'.format(self._data[WATER_REMAIN_TIME['key']])
 
@@ -155,16 +167,14 @@ class YunmiKettle(Entity):
         """Parse data."""
         try:
             data = {}
-            status = self._device.send('get_prop', ["curr_tempe"])
-            data[CURRENT_TEMPE['key']] = status[0]
-            status = self._device.send('get_prop', ["setup_tempe"])
-            data[SETUP_TEMPE['key']] = status[0]
-            status = self._device.send('get_prop', ["custom_tempe1"])
-            data[CUSTOM_TEMPE1['key']] = status[0]
-            status = self._device.send('get_prop', ["tds"])
-            data[TDS['key']] = status[0]
-            status = self._device.send('get_prop', ["water_remain_time"])
-            data[WATER_REMAIN_TIME['key']] = status[0]
+            curr_tempe_status = self._device.send('get_prop', ["curr_tempe"])
+            data[CURRENT_TEMPE['key']] = curr_tempe_status[0]
+            setup_tempe_status = self._device.send('get_prop', ["setup_tempe"])
+            data[SETUP_TEMPE['key']] = setup_tempe_status[0]
+            tds_status = self._device.send('get_prop', ["tds"])
+            data[TDS['key']] = tds_status[0]
+            water_remain_time_status = self._device.send('get_prop', ["water_remain_time"])
+            data[WATER_REMAIN_TIME['key']] = water_remain_time_status[0]
 
 
             self._data = data
