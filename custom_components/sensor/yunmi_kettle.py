@@ -11,8 +11,8 @@ _LOGGER = logging.getLogger(__name__)
 
 REQUIREMENTS = ['python-miio>=0.3.1']
 
-CURRENT_TEMPE = {'name': 'kettle current temperture', 'key': '°C'}
-SETUP_TEMPE = {'name': 'kettle setup temperture', 'key': '°C'}
+CURRENT_TEMPE = {'name': 'kettle current temperture', 'key': 'curr_temp'}
+SETUP_TEMPE = {'name': 'kettle setup temperture', 'key': 'setup_temp'}
 TDS = {'name': 'kettle TDS', 'key': 'ppm'}
 WATER_REMAIN_TIME = {'name': 'kettle water remain time', 'key': 'hour'}
 
@@ -93,7 +93,7 @@ class YunmiKettleSensor(Entity):
     def unit_of_measurement(self):
         """Return the unit of measurement of this entity, if any."""
         if self._data_key['key'] is TDS['key']:
-            return 'TDS'
+            return 'ppm'
         if self._data_key['key'] is WATER_REMAIN_TIME['key']:
             return 'hour'
         return '°C'
@@ -167,18 +167,18 @@ class YunmiKettle(Entity):
         """Parse data."""
         try:
             data = {}
-            curr_tempe_status = self._device.send('get_prop', ["curr_tempe"])
-            data[CURRENT_TEMPE['key']] = curr_tempe_status[0]
-            setup_tempe_status = self._device.send('get_prop', ["setup_tempe"])
-            data[SETUP_TEMPE['key']] = setup_tempe_status[0]
             tds_status = self._device.send('get_prop', ["tds"])
             data[TDS['key']] = tds_status[0]
             water_remain_time_status = self._device.send('get_prop', ["water_remain_time"])
             data[WATER_REMAIN_TIME['key']] = water_remain_time_status[0]
+            setup_tempe_status = self._device.send('get_prop', ["setup_tempe"])
+            data[SETUP_TEMPE['key']] = setup_tempe_status[0]
+            curr_tempe_status = self._device.send('get_prop', ["curr_tempe"])
+            data[CURRENT_TEMPE['key']] = curr_tempe_status[0]
 
 
             self._data = data
-            self._state = self._data[CURRENT_TEMPE['key']]
+            self._state = self._data[SETUP_TEMPE['key']]
         except DeviceException:
             _LOGGER.exception('Fail to get_prop from YunmiKettle')
             self._data = None
