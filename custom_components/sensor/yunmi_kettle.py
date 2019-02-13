@@ -51,9 +51,11 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
     def handle_set_temp(service):
         temp = service.data.get(ATTR_TEMP, DEFAULT_TEMP)
-        _LOGGER.info("yunmi kettle service call data: %s", temp)
+		if int(temp) < 30 or int(temp) > 90:
+			return
+        _LOGGER.info("yunmi kettle service call data: %s", int(temp))
         result = device.send('set_tempe_setup', [1, int(temp)])
-
+		yumikettle.update()
         return result == SUCCESS
 
     hass.services.register(DOMAIN, 'set_kettle_temp', handle_set_temp)
