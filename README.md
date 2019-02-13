@@ -1,8 +1,10 @@
 # homeassistant-yunmi-kettle
 
 This is a custom component for hass to integrate the yunmi kettle:
+
 Model ID: yunmi.kettle.r3
 
+![examplecard](https://github.com/lukezzz/homeassistant-yunmi-kettle/blob/master/iamges/yunmikettlecard.png)
 
 Please follow the instructions on [Retrieving the Access Token](https://www.home-assistant.io/components/vacuum.xiaomi_miio/#retrieving-the-access-token) to get the API token to use in the configuration.yaml file.
 
